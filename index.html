@@ -1,0 +1,805 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#081018">
+  <title>箭速 · 左右箭头反应训练</title>
+  <meta name="description" content="按颜色切换判断规则，训练左右方向辨别、注意切换与反应速度。">
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='15' fill='%23081018'/%3E%3Cpath d='M11 32h38M35 18l14 14-14 14' fill='none' stroke='%2348e5c2' stroke-width='7' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E">
+  <style>
+    :root {
+      color-scheme: dark;
+      --ink: #eef5f5;
+      --muted: #8fa3a7;
+      --panel: rgba(16, 29, 38, .82);
+      --panel-strong: #142631;
+      --line: rgba(171, 214, 214, .13);
+      --mint: #48e5c2;
+      --mint-strong: #76f3d7;
+      --blue: #4aa8ff;
+      --red: #ff5e66;
+      --amber: #f5bf5f;
+      --bg: #081018;
+      --shadow: 0 30px 80px rgba(0, 0, 0, .34);
+    }
+
+    * { box-sizing: border-box; }
+
+    html, body { min-height: 100%; }
+
+    body {
+      margin: 0;
+      min-width: 320px;
+      background:
+        radial-gradient(circle at 9% 3%, rgba(45, 173, 157, .13), transparent 30rem),
+        radial-gradient(circle at 90% 95%, rgba(54, 125, 181, .12), transparent 32rem),
+        var(--bg);
+      color: var(--ink);
+      font-family: Inter, "PingFang SC", "Microsoft YaHei", system-ui, sans-serif;
+      font-size: 16px;
+      line-height: 1.5;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    button, select { font: inherit; }
+    button { color: inherit; }
+
+    .shell {
+      min-height: 100vh;
+      padding: max(20px, env(safe-area-inset-top)) max(18px, env(safe-area-inset-right)) max(24px, env(safe-area-inset-bottom)) max(18px, env(safe-area-inset-left));
+      display: grid;
+      grid-template-rows: auto 1fr;
+      gap: 22px;
+    }
+
+    .topbar {
+      width: min(1180px, 100%);
+      margin: 0 auto;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 18px;
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      font-weight: 780;
+      letter-spacing: -.02em;
+    }
+
+    .brand-mark {
+      width: 38px;
+      height: 38px;
+      display: grid;
+      place-items: center;
+      color: var(--mint);
+      border: 1px solid rgba(72, 229, 194, .35);
+      background: rgba(72, 229, 194, .08);
+      border-radius: 12px;
+      font-size: 22px;
+    }
+
+    .top-actions { display: flex; gap: 10px; }
+
+    .quiet-btn, .icon-btn {
+      min-height: 42px;
+      border: 1px solid var(--line);
+      background: rgba(255, 255, 255, .035);
+      border-radius: 12px;
+      padding: 0 14px;
+      cursor: pointer;
+      transition: .18s ease;
+    }
+
+    .quiet-btn:hover, .icon-btn:hover { border-color: rgba(72, 229, 194, .45); background: rgba(72, 229, 194, .08); }
+    .quiet-btn:focus-visible, .icon-btn:focus-visible, .answer-btn:focus-visible, .start-btn:focus-visible, select:focus-visible { outline: 3px solid rgba(72, 229, 194, .32); outline-offset: 3px; }
+
+    main {
+      width: min(1180px, 100%);
+      margin: 0 auto;
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) 300px;
+      gap: 20px;
+      align-items: stretch;
+    }
+
+    .arena, .side-card {
+      border: 1px solid var(--line);
+      background: var(--panel);
+      box-shadow: var(--shadow);
+      backdrop-filter: blur(20px);
+    }
+
+    .arena {
+      min-height: 660px;
+      border-radius: 28px;
+      overflow: hidden;
+      display: grid;
+      grid-template-rows: auto 1fr auto;
+      position: relative;
+    }
+
+    .arena::before {
+      content: "";
+      position: absolute;
+      inset: 0;
+      pointer-events: none;
+      background-image: linear-gradient(rgba(255,255,255,.015) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,.015) 1px, transparent 1px);
+      background-size: 28px 28px;
+      mask-image: linear-gradient(to bottom, black, transparent 78%);
+    }
+
+    .statusbar {
+      position: relative;
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 12px;
+      padding: 18px 22px;
+      border-bottom: 1px solid var(--line);
+    }
+
+    .metric { min-width: 0; }
+    .metric-label { display: block; color: var(--muted); font-size: .78rem; letter-spacing: .08em; text-transform: uppercase; }
+    .metric-value { display: block; margin-top: 3px; font-variant-numeric: tabular-nums; font-weight: 720; font-size: 1.2rem; }
+
+    .progress-track { position: absolute; left: 0; right: 0; bottom: -1px; height: 2px; background: transparent; }
+    .progress-bar { width: 0; height: 100%; background: var(--mint); box-shadow: 0 0 14px var(--mint); transition: width .1s linear; }
+
+    .stage {
+      position: relative;
+      display: grid;
+      place-items: center;
+      padding: 54px 28px 34px;
+      isolation: isolate;
+    }
+
+    .stage-inner { width: min(660px, 100%); text-align: center; }
+
+    .eyebrow {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      min-height: 32px;
+      padding: 0 12px;
+      border-radius: 999px;
+      border: 1px solid var(--line);
+      color: var(--muted);
+      font-size: .86rem;
+      font-weight: 650;
+      letter-spacing: .03em;
+      background: rgba(0, 0, 0, .12);
+    }
+
+    .eyebrow-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--mint); box-shadow: 0 0 12px var(--mint); }
+
+    .intro-title {
+      margin: 22px 0 10px;
+      font-size: clamp(2.3rem, 7vw, 4.6rem);
+      line-height: 1.02;
+      letter-spacing: -.065em;
+    }
+
+    .intro-copy { max-width: 560px; margin: 0 auto; color: var(--muted); font-size: 1.05rem; }
+
+    .rule-strip {
+      margin: 30px auto 26px;
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      max-width: 560px;
+      text-align: left;
+      border: 1px solid var(--line);
+      border-radius: 18px;
+      overflow: hidden;
+      background: rgba(0,0,0,.14);
+    }
+
+    .rule {
+      padding: 16px 18px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    .rule + .rule { border-left: 1px solid var(--line); }
+    .swatch { width: 12px; height: 12px; border-radius: 50%; flex: none; }
+    .swatch.cool { background: var(--blue); box-shadow: 0 0 12px rgba(74,168,255,.5); }
+    .swatch.red { background: var(--red); box-shadow: 0 0 12px rgba(255,94,102,.5); }
+    .rule strong { display: block; font-size: .94rem; }
+    .rule span:last-child { display: block; color: var(--muted); font-size: .82rem; margin-top: 1px; }
+
+    .start-btn {
+      min-width: 220px;
+      min-height: 58px;
+      border: 0;
+      border-radius: 17px;
+      color: #04241c;
+      background: var(--mint);
+      font-weight: 800;
+      cursor: pointer;
+      box-shadow: 0 14px 40px rgba(72, 229, 194, .22);
+      transition: transform .16s ease, background .16s ease;
+    }
+    .start-btn:hover { transform: translateY(-2px); background: var(--mint-strong); }
+    .start-hint { margin: 12px 0 0; color: #748a90; font-size: .82rem; }
+
+    .stimulus-wrap { display: none; }
+    .arena.playing .intro { display: none; }
+    .arena.playing .stimulus-wrap { display: block; }
+
+    .instruction { color: var(--muted); font-size: .95rem; min-height: 24px; }
+
+    .arrows {
+      margin: 38px 0 34px;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      gap: clamp(7px, 1.8vw, 18px);
+      font-size: clamp(3.7rem, 9vw, 7.6rem);
+      line-height: 1;
+      font-family: Arial, sans-serif;
+      font-weight: 900;
+      letter-spacing: 0;
+      user-select: none;
+      padding: 25px 18px;
+      border: 1px solid rgba(255,255,255,.72);
+      border-radius: 24px;
+      background: #f4f7f7;
+      box-shadow: 0 18px 55px rgba(0,0,0,.24), inset 0 -1px rgba(0,0,0,.08);
+      min-height: 132px;
+    }
+    .arrows[data-color="blue"] { color: var(--blue); }
+    .arrows[data-color="black"] { color: #111927; }
+    .arrows[data-color="red"] { color: var(--red); }
+    .arrow.center { transform: scale(1.05); }
+
+    .feedback {
+      min-height: 26px;
+      font-weight: 720;
+      letter-spacing: .04em;
+      opacity: 0;
+      transform: translateY(4px);
+      transition: .14s ease;
+    }
+    .feedback.show { opacity: 1; transform: translateY(0); }
+    .feedback.good { color: var(--mint); }
+    .feedback.bad { color: var(--red); }
+
+    .answer-zone {
+      position: relative;
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+      padding: 16px 22px 22px;
+    }
+
+    .answer-btn {
+      min-height: 78px;
+      border: 1px solid var(--line);
+      border-radius: 18px;
+      background: rgba(255,255,255,.04);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 15px;
+      cursor: pointer;
+      font-size: 1.05rem;
+      font-weight: 720;
+      transition: .12s ease;
+    }
+    .answer-btn:hover { transform: translateY(-1px); background: rgba(255,255,255,.075); border-color: rgba(72,229,194,.38); }
+    .answer-btn:active { transform: scale(.985); }
+    .answer-btn:disabled { opacity: .4; cursor: not-allowed; }
+    .answer-arrow { color: var(--mint); font-size: 2rem; line-height: 1; }
+    kbd { min-width: 34px; padding: 3px 8px; border-radius: 7px; border: 1px solid var(--line); background: rgba(0,0,0,.22); color: var(--muted); font-size: .75rem; box-shadow: inset 0 -2px rgba(0,0,0,.2); }
+
+    .side {
+      display: grid;
+      grid-template-rows: auto auto 1fr;
+      gap: 16px;
+    }
+
+    .side-card { border-radius: 22px; padding: 20px; box-shadow: 0 22px 60px rgba(0,0,0,.22); }
+    .side-title { margin: 0 0 15px; font-size: .87rem; color: var(--muted); letter-spacing: .08em; text-transform: uppercase; }
+
+    .form-row { display: grid; gap: 7px; margin-bottom: 14px; }
+    .form-row:last-child { margin-bottom: 0; }
+    .form-row label { font-size: .85rem; color: var(--muted); }
+    select {
+      width: 100%;
+      height: 44px;
+      padding: 0 12px;
+      border-radius: 11px;
+      border: 1px solid var(--line);
+      background: #10202a;
+      color: var(--ink);
+    }
+
+    .stat-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+    .stat-box { padding: 13px; border-radius: 14px; background: rgba(255,255,255,.035); border: 1px solid rgba(255,255,255,.04); }
+    .stat-box span { display: block; color: var(--muted); font-size: .78rem; }
+    .stat-box strong { display: block; margin-top: 3px; font-size: 1.18rem; font-variant-numeric: tabular-nums; }
+
+    .tips { display: grid; gap: 15px; }
+    .tip { display: grid; grid-template-columns: 28px 1fr; gap: 10px; align-items: start; }
+    .tip-num { width: 26px; height: 26px; display: grid; place-items: center; border-radius: 8px; background: rgba(72,229,194,.09); color: var(--mint); font-size: .8rem; font-weight: 800; }
+    .tip strong { display: block; font-size: .9rem; }
+    .tip p { margin: 3px 0 0; color: var(--muted); font-size: .81rem; line-height: 1.5; }
+
+    .result-layer {
+      position: absolute;
+      inset: 0;
+      z-index: 4;
+      display: none;
+      place-items: center;
+      padding: 24px;
+      background: rgba(8,16,24,.92);
+      backdrop-filter: blur(14px);
+    }
+    .result-layer.show { display: grid; }
+    .result-card { width: min(540px, 100%); text-align: center; }
+    .result-kicker { color: var(--mint); font-weight: 750; letter-spacing: .08em; text-transform: uppercase; font-size: .8rem; }
+    .result-card h2 { margin: 10px 0 6px; font-size: clamp(2rem, 7vw, 3.3rem); letter-spacing: -.045em; }
+    .result-summary { margin: 0 0 24px; color: var(--muted); }
+    .result-metrics { display: grid; grid-template-columns: repeat(3,1fr); gap: 10px; margin: 0 0 24px; }
+    .result-metric { padding: 16px 8px; border: 1px solid var(--line); border-radius: 15px; background: rgba(255,255,255,.035); }
+    .result-metric strong { display: block; font-size: 1.4rem; font-variant-numeric: tabular-nums; }
+    .result-metric span { color: var(--muted); font-size: .76rem; }
+    .result-actions { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; }
+    .result-note { margin: 16px 0 0; color: #71858b; font-size: .75rem; }
+
+    .countdown {
+      position: absolute;
+      inset: 0;
+      z-index: 5;
+      display: none;
+      place-items: center;
+      background: rgba(8,16,24,.9);
+      font-size: clamp(5rem, 18vw, 10rem);
+      font-weight: 850;
+      color: var(--mint);
+    }
+    .countdown.show { display: grid; }
+
+    .paused .arrows { opacity: .08; filter: blur(7px); }
+
+    @media (max-width: 900px) {
+      main { grid-template-columns: 1fr; }
+      .side { grid-template-columns: 1fr 1fr; grid-template-rows: auto; }
+      .side-card:last-child { display: none; }
+      .arena { min-height: 620px; }
+    }
+
+    @media (max-width: 620px) {
+      .shell { gap: 14px; padding-left: 12px; padding-right: 12px; }
+      .brand-text span { display: none; }
+      .top-actions .quiet-btn:first-child { display: none; }
+      .arena { min-height: calc(100vh - 92px); border-radius: 22px; }
+      .statusbar { padding: 14px 15px; gap: 7px; }
+      .metric-label { font-size: .65rem; }
+      .metric-value { font-size: .98rem; }
+      .stage { padding: 38px 16px 24px; }
+      .intro-title { font-size: clamp(2.2rem, 13vw, 3.4rem); }
+      .rule-strip { grid-template-columns: 1fr; }
+      .rule + .rule { border-left: 0; border-top: 1px solid var(--line); }
+      .arrows { gap: 8px; font-size: clamp(3.05rem, 15vw, 5.2rem); margin: 32px 0 28px; }
+      .answer-zone { padding: 12px 14px 16px; }
+      .answer-btn { min-height: 72px; }
+      .answer-btn kbd { display: none; }
+      .side { display: grid; grid-template-columns: 1fr; }
+      .side-card:last-child { display: none; }
+      .result-metrics { grid-template-columns: 1fr 1fr 1fr; }
+      .result-metric strong { font-size: 1.15rem; }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after { scroll-behavior: auto !important; transition-duration: .01ms !important; animation-duration: .01ms !important; }
+    }
+  </style>
+</head>
+<body>
+  <div class="shell">
+    <header class="topbar">
+      <div class="brand"><span class="brand-mark" aria-hidden="true">→</span><span class="brand-text">箭速 <span>· Reaction Lab</span></span></div>
+      <div class="top-actions">
+        <button class="quiet-btn" id="fullscreenBtn" type="button">专注模式</button>
+        <button class="quiet-btn" id="pauseBtn" type="button" disabled>暂停</button>
+      </div>
+    </header>
+
+    <main>
+      <section class="arena" id="arena" aria-label="左右箭头反应训练区">
+        <div class="statusbar">
+          <div class="metric"><span class="metric-label">剩余</span><span class="metric-value" id="timeValue">03:00</span></div>
+          <div class="metric"><span class="metric-label">进度</span><span class="metric-value" id="trialValue">0</span></div>
+          <div class="metric"><span class="metric-label">正确率</span><span class="metric-value" id="accuracyValue">—</span></div>
+          <div class="metric"><span class="metric-label">平均反应</span><span class="metric-value" id="rtValue">—</span></div>
+          <div class="progress-track"><div class="progress-bar" id="progressBar"></div></div>
+        </div>
+
+        <div class="stage">
+          <div class="stage-inner intro">
+            <span class="eyebrow"><span class="eyebrow-dot"></span>注意切换训练</span>
+            <h1 class="intro-title">只看对的箭头</h1>
+            <p class="intro-copy">颜色决定判断位置。蓝色或黑色看中央箭头；红色忽略中央，看两侧箭头。</p>
+            <div class="rule-strip" aria-label="作答规则">
+              <div class="rule"><span class="swatch cool"></span><div><strong>蓝色 / 黑色</strong><span>回答中央箭头方向</span></div></div>
+              <div class="rule"><span class="swatch red"></span><div><strong>红色</strong><span>回答两侧箭头方向</span></div></div>
+            </div>
+            <button class="start-btn" id="startBtn" type="button">开始训练</button>
+            <p class="start-hint">也可按空格开始 · 使用键盘 ← → 作答</p>
+          </div>
+
+          <div class="stage-inner stimulus-wrap" aria-live="polite">
+            <div class="instruction" id="instruction">蓝 / 黑看中央 · 红色看两侧</div>
+            <div class="arrows" id="arrows" data-color="blue" aria-label="箭头题目"></div>
+            <div class="feedback" id="feedback">正确</div>
+          </div>
+
+          <div class="countdown" id="countdown" aria-live="assertive">3</div>
+
+          <div class="result-layer" id="resultLayer">
+            <div class="result-card">
+              <div class="result-kicker">本轮完成</div>
+              <h2 id="resultTitle">节奏不错</h2>
+              <p class="result-summary" id="resultSummary">先稳住正确率，再逐步提速。</p>
+              <div class="result-metrics">
+                <div class="result-metric"><strong id="finalScore">0</strong><span>训练分</span></div>
+                <div class="result-metric"><strong id="finalAccuracy">0%</strong><span>正确率</span></div>
+                <div class="result-metric"><strong id="finalRt">—</strong><span>平均反应</span></div>
+              </div>
+              <div class="result-actions">
+                <button class="start-btn" id="againBtn" type="button">再练一轮</button>
+                <button class="quiet-btn" id="homeBtn" type="button">返回设置</button>
+              </div>
+              <p class="result-note">训练分仅用于自我比较，不代表任何招聘测评的官方评分。</p>
+            </div>
+          </div>
+        </div>
+
+        <div class="answer-zone">
+          <button class="answer-btn" id="leftBtn" type="button" disabled><span class="answer-arrow">←</span><span>向左</span><kbd>←</kbd></button>
+          <button class="answer-btn" id="rightBtn" type="button" disabled><span>向右</span><span class="answer-arrow">→</span><kbd>→</kbd></button>
+        </div>
+      </section>
+
+      <aside class="side">
+        <section class="side-card">
+          <h2 class="side-title">训练设置</h2>
+          <div class="form-row"><label for="modeSelect">时长</label><select id="modeSelect"><option value="20">热身 · 20 题</option><option value="60">冲刺 · 60 秒</option><option value="180" selected>模拟 · 3 分钟 / 135 题</option></select></div>
+          <div class="form-row"><label for="levelSelect">难度</label><select id="levelSelect"><option value="easy">入门 · 干扰较少</option><option value="normal" selected>标准 · 均衡干扰</option><option value="hard">挑战 · 红色更多</option><option value="adaptive">自适应 · 随表现调整</option></select></div>
+        </section>
+
+        <section class="side-card">
+          <h2 class="side-title">个人最佳</h2>
+          <div class="stat-grid">
+            <div class="stat-box"><span>最高训练分</span><strong id="bestScore">—</strong></div>
+            <div class="stat-box"><span>最佳正确率</span><strong id="bestAccuracy">—</strong></div>
+            <div class="stat-box"><span>最快均速</span><strong id="bestRt">—</strong></div>
+            <div class="stat-box"><span>总练习题</span><strong id="totalTrials">0</strong></div>
+          </div>
+        </section>
+
+        <section class="side-card">
+          <h2 class="side-title">提分节奏</h2>
+          <div class="tips">
+            <div class="tip"><span class="tip-num">1</span><div><strong>先辨颜色，再找位置</strong><p>把“蓝黑＝中间、红＝两边”练成固定口令。</p></div></div>
+            <div class="tip"><span class="tip-num">2</span><div><strong>手指预先放在按键上</strong><p>减少移动时间，视线保持在箭头组中央。</p></div></div>
+            <div class="tip"><span class="tip-num">3</span><div><strong>正确率稳定后再提速</strong><p>低于 90% 时先放慢，避免把错误反应练熟。</p></div></div>
+          </div>
+        </section>
+      </aside>
+    </main>
+  </div>
+
+  <script>
+    (() => {
+      const $ = (id) => document.getElementById(id);
+      const els = {
+        arena: $('arena'), start: $('startBtn'), again: $('againBtn'), home: $('homeBtn'),
+        pause: $('pauseBtn'), fullscreen: $('fullscreenBtn'), left: $('leftBtn'), right: $('rightBtn'),
+        arrows: $('arrows'), feedback: $('feedback'), instruction: $('instruction'), countdown: $('countdown'),
+        result: $('resultLayer'), mode: $('modeSelect'), level: $('levelSelect'),
+        time: $('timeValue'), trial: $('trialValue'), accuracy: $('accuracyValue'), rt: $('rtValue'), progress: $('progressBar'),
+        finalScore: $('finalScore'), finalAccuracy: $('finalAccuracy'), finalRt: $('finalRt'), resultTitle: $('resultTitle'), resultSummary: $('resultSummary'),
+        bestScore: $('bestScore'), bestAccuracy: $('bestAccuracy'), bestRt: $('bestRt'), totalTrials: $('totalTrials')
+      };
+
+      const state = {
+        running: false, paused: false, accepting: false, sessionStart: 0, trialStart: 0,
+        pausedAt: 0, pausedTotal: 0, duration: 180, targetTrials: null,
+        trials: 0, correct: 0, streak: 0, bestStreak: 0, correctTimes: [], current: null,
+        timer: null, nextTimer: null
+      };
+
+      const statsKey = 'arrow-focus-trainer-stats-v1';
+      const defaultStats = { bestScore: 0, bestAccuracy: 0, bestRt: null, totalTrials: 0 };
+
+      function readStats() {
+        try { return { ...defaultStats, ...JSON.parse(localStorage.getItem(statsKey) || '{}') }; }
+        catch { return { ...defaultStats }; }
+      }
+
+      function writeStats(next) {
+        try { localStorage.setItem(statsKey, JSON.stringify(next)); } catch {}
+      }
+
+      function renderBest() {
+        const s = readStats();
+        els.bestScore.textContent = s.bestScore || '—';
+        els.bestAccuracy.textContent = s.bestAccuracy ? `${s.bestAccuracy}%` : '—';
+        els.bestRt.textContent = s.bestRt ? `${s.bestRt}ms` : '—';
+        els.totalTrials.textContent = s.totalTrials.toLocaleString('zh-CN');
+      }
+
+      function modeConfig() {
+        const value = Number(els.mode.value);
+        if (value === 20) return { duration: null, targetTrials: 20, label: '20 题热身' };
+        if (value === 60) return { duration: 60, targetTrials: null, label: '60 秒冲刺' };
+        return { duration: 180, targetTrials: 135, label: '3 分钟 · 135 题模拟' };
+      }
+
+      function colorWeights() {
+        const level = els.level.value;
+        if (level === 'easy') return [.48, .37, .15];
+        if (level === 'hard') return [.34, .25, .41];
+        if (level === 'adaptive') {
+          const accuracy = state.trials ? state.correct / state.trials : .9;
+          return accuracy > .92 ? [.31, .22, .47] : [.43, .32, .25];
+        }
+        return [.40, .30, .30];
+      }
+
+      function pickColor() {
+        const [blue, black] = colorWeights();
+        const r = Math.random();
+        return r < blue ? 'blue' : r < blue + black ? 'black' : 'red';
+      }
+
+      function makeTrial() {
+        const center = Math.random() < .5 ? 'left' : 'right';
+        let flank;
+        const incongruentChance = els.level.value === 'easy' ? .38 : els.level.value === 'hard' ? .67 : .55;
+        flank = Math.random() < incongruentChance ? (center === 'left' ? 'right' : 'left') : center;
+        const color = pickColor();
+        return { center, flank, color, answer: color === 'red' ? flank : center };
+      }
+
+      function arrow(direction) { return direction === 'left' ? '←' : '→'; }
+
+      function showTrial() {
+        state.current = makeTrial();
+        state.accepting = true;
+        state.trialStart = performance.now();
+        els.feedback.className = 'feedback';
+        els.feedback.textContent = '';
+        els.arrows.dataset.color = state.current.color;
+        const sequence = [state.current.flank, state.current.flank, state.current.center, state.current.flank, state.current.flank];
+        els.arrows.replaceChildren(...sequence.map((direction, i) => {
+          const span = document.createElement('span');
+          span.className = i === 2 ? 'arrow center' : 'arrow';
+          span.textContent = arrow(direction);
+          return span;
+        }));
+        const colorName = state.current.color === 'red' ? '红色' : state.current.color === 'blue' ? '蓝色' : '黑色';
+        els.arrows.setAttribute('aria-label', `${colorName}箭头，请判断${state.current.color === 'red' ? '两侧' : '中央'}箭头方向`);
+        els.instruction.textContent = state.current.color === 'red' ? '红色 · 看两侧' : `${colorName} · 看中央`;
+      }
+
+      function elapsedMs() { return performance.now() - state.sessionStart - state.pausedTotal; }
+
+      function updateHud() {
+        const config = modeConfig();
+        let ratio = config.targetTrials ? Math.min(1, state.trials / config.targetTrials) : 0;
+        if (!config.duration) {
+          els.time.textContent = '不限时';
+        } else {
+          const remain = Math.max(0, config.duration - elapsedMs() / 1000);
+          const wholeSeconds = Math.ceil(remain);
+          const mins = Math.floor(wholeSeconds / 60);
+          const secs = wholeSeconds % 60;
+          els.time.textContent = `${String(mins).padStart(2,'0')}:${String(secs).padStart(2,'0')}`;
+          ratio = Math.max(ratio, 1 - remain / config.duration);
+          if (remain <= 0 && state.running) finishSession();
+        }
+        els.progress.style.width = `${ratio * 100}%`;
+        els.trial.textContent = config.targetTrials ? `${state.trials} / ${config.targetTrials}` : state.trials;
+        els.accuracy.textContent = state.trials ? `${Math.round(state.correct / state.trials * 100)}%` : '—';
+        const avg = average(state.correctTimes);
+        els.rt.textContent = avg ? `${Math.round(avg)}ms` : '—';
+      }
+
+      function average(values) { return values.length ? values.reduce((a,b) => a + b, 0) / values.length : 0; }
+
+      function respond(direction) {
+        if (!state.running || state.paused || !state.accepting) return false;
+        state.accepting = false;
+        const rt = Math.round(performance.now() - state.trialStart);
+        const correct = direction === state.current.answer;
+        state.trials++;
+        if (correct) {
+          state.correct++;
+          state.streak++;
+          state.bestStreak = Math.max(state.bestStreak, state.streak);
+          state.correctTimes.push(rt);
+          els.feedback.textContent = rt < 450 ? `准确 · ${rt}ms` : `正确 · ${rt}ms`;
+          els.feedback.className = 'feedback show good';
+        } else {
+          state.streak = 0;
+          els.feedback.textContent = `错误 · 应选${state.current.answer === 'left' ? '左' : '右'}`;
+          els.feedback.className = 'feedback show bad';
+        }
+        updateHud();
+        const config = modeConfig();
+        if (config.targetTrials && state.trials >= config.targetTrials) {
+          state.nextTimer = setTimeout(finishSession, 280);
+        } else if (state.running) {
+          const delay = correct ? 150 : 360;
+          state.nextTimer = setTimeout(showTrial, delay);
+        }
+        return correct;
+      }
+
+      function resetSession() {
+        clearInterval(state.timer); clearTimeout(state.nextTimer);
+        Object.assign(state, { running: false, paused: false, accepting: false, sessionStart: 0, trialStart: 0, pausedAt: 0, pausedTotal: 0, trials: 0, correct: 0, streak: 0, bestStreak: 0, correctTimes: [], current: null, timer: null, nextTimer: null });
+      }
+
+      async function startSession() {
+        if (state.running) return;
+        resetSession();
+        els.result.classList.remove('show');
+        els.mode.disabled = true; els.level.disabled = true;
+        els.arena.classList.add('playing');
+        els.pause.disabled = true; els.left.disabled = true; els.right.disabled = true;
+        const config = modeConfig();
+        state.duration = config.duration; state.targetTrials = config.targetTrials;
+        els.countdown.classList.add('show');
+        for (const text of ['3','2','1']) {
+          els.countdown.textContent = text;
+          await new Promise(resolve => setTimeout(resolve, 620));
+        }
+        els.countdown.textContent = '开始';
+        await new Promise(resolve => setTimeout(resolve, 360));
+        els.countdown.classList.remove('show');
+        state.running = true;
+        state.sessionStart = performance.now();
+        els.pause.disabled = false; els.left.disabled = false; els.right.disabled = false;
+        showTrial();
+        updateHud();
+        state.timer = setInterval(updateHud, 100);
+      }
+
+      function calculateScore() {
+        const accuracy = state.trials ? state.correct / state.trials : 0;
+        const rt = average(state.correctTimes) || 1600;
+        const speed = Math.max(0, Math.min(100, 100 - (rt - 300) / 9));
+        return Math.max(0, Math.round(accuracy * 700 + speed * 3 + Math.min(state.bestStreak, 30) * 2));
+      }
+
+      function finishSession() {
+        if (!state.running) return;
+        state.running = false; state.accepting = false;
+        clearInterval(state.timer); clearTimeout(state.nextTimer);
+        els.left.disabled = true; els.right.disabled = true; els.pause.disabled = true;
+        const accuracy = state.trials ? Math.round(state.correct / state.trials * 100) : 0;
+        const rt = Math.round(average(state.correctTimes));
+        const score = calculateScore();
+        els.finalScore.textContent = score;
+        els.finalAccuracy.textContent = `${accuracy}%`;
+        els.finalRt.textContent = rt ? `${rt}ms` : '—';
+        if (accuracy >= 95 && rt && rt < 650) {
+          els.resultTitle.textContent = '又快又稳';
+          els.resultSummary.textContent = `连续答对最高 ${state.bestStreak} 题，可以尝试提高难度。`;
+        } else if (accuracy >= 90) {
+          els.resultTitle.textContent = '节奏不错';
+          els.resultSummary.textContent = `连续答对最高 ${state.bestStreak} 题，继续保持稳定节奏。`;
+        } else {
+          els.resultTitle.textContent = '先把规则练稳';
+          els.resultSummary.textContent = '先辨颜色，再判断位置；正确率稳定后再追求速度。';
+        }
+        const saved = readStats();
+        const next = {
+          bestScore: Math.max(saved.bestScore, score),
+          bestAccuracy: Math.max(saved.bestAccuracy, accuracy),
+          bestRt: rt ? (saved.bestRt ? Math.min(saved.bestRt, rt) : rt) : saved.bestRt,
+          totalTrials: saved.totalTrials + state.trials
+        };
+        writeStats(next); renderBest();
+        els.result.classList.add('show');
+      }
+
+      function returnHome() {
+        resetSession();
+        els.result.classList.remove('show');
+        els.arena.classList.remove('playing', 'paused');
+        els.mode.disabled = false; els.level.disabled = false;
+        els.pause.textContent = '暂停';
+        els.pause.disabled = true;
+        els.left.disabled = true; els.right.disabled = true;
+        const config = modeConfig();
+        els.time.textContent = config.targetTrials ? '不限时' : config.duration === 60 ? '01:00' : '03:00';
+        if (config.duration) els.time.textContent = config.duration === 60 ? '01:00' : '03:00';
+        els.trial.textContent = config.targetTrials ? `0 / ${config.targetTrials}` : '0';
+        els.accuracy.textContent = '—'; els.rt.textContent = '—'; els.progress.style.width = '0%';
+      }
+
+      function togglePause() {
+        if (!state.running) return;
+        state.paused = !state.paused;
+        if (state.paused) {
+          state.accepting = false;
+          state.pausedAt = performance.now();
+          els.arena.classList.add('paused');
+          els.pause.textContent = '继续';
+          els.instruction.textContent = '已暂停';
+          els.left.disabled = true; els.right.disabled = true;
+        } else {
+          state.pausedTotal += performance.now() - state.pausedAt;
+          els.arena.classList.remove('paused');
+          els.pause.textContent = '暂停';
+          els.left.disabled = false; els.right.disabled = false;
+          showTrial();
+        }
+      }
+
+      function toggleFullscreen() {
+        if (!document.fullscreenElement) document.documentElement.requestFullscreen?.();
+        else document.exitFullscreen?.();
+      }
+
+      els.start.addEventListener('click', startSession);
+      els.again.addEventListener('click', () => { resetSession(); startSession(); });
+      els.home.addEventListener('click', returnHome);
+      els.pause.addEventListener('click', togglePause);
+      els.fullscreen.addEventListener('click', toggleFullscreen);
+      els.left.addEventListener('click', () => respond('left'));
+      els.right.addEventListener('click', () => respond('right'));
+      els.mode.addEventListener('change', returnHome);
+      document.addEventListener('keydown', (event) => {
+        if (event.repeat) return;
+        if (event.key === 'ArrowLeft' || event.key === 'ArrowRight') {
+          event.preventDefault();
+          respond(event.key === 'ArrowLeft' ? 'left' : 'right');
+        } else if (event.code === 'Space' && !state.running && !els.result.classList.contains('show')) {
+          event.preventDefault(); startSession();
+        } else if (event.key.toLowerCase() === 'p' && state.running) togglePause();
+      });
+
+      if (document.modelContext?.registerTool) {
+        const register = (tool) => Promise.resolve(document.modelContext.registerTool(tool)).catch(() => {});
+        register({
+          name: 'start_arrow_training', title: '开始箭头训练',
+          description: '使用当前设置开始一轮左右箭头反应训练。',
+          inputSchema: { type: 'object', properties: {}, additionalProperties: false },
+          annotations: { readOnlyHint: false, untrustedContentHint: false },
+          execute: async () => { await startSession(); return { status: 'started', mode: modeConfig().label, level: els.level.value }; }
+        });
+        register({
+          name: 'answer_arrow_trial', title: '回答当前箭头',
+          description: '对当前可见题目提交向左或向右的答案。',
+          inputSchema: { type: 'object', properties: { direction: { type: 'string', enum: ['left','right'] } }, required: ['direction'], additionalProperties: false },
+          annotations: { readOnlyHint: false, untrustedContentHint: false },
+          execute: ({ direction }) => {
+            if (direction !== 'left' && direction !== 'right') throw new Error('direction 必须是 left 或 right');
+            if (!state.running || !state.accepting) throw new Error('当前没有可回答的题目');
+            const correct = respond(direction);
+            return { correct, completed_trials: state.trials, accuracy_percent: Math.round(state.correct / state.trials * 100) };
+          }
+        });
+        register({
+          name: 'read_arrow_training_stats', title: '读取训练统计',
+          description: '读取当前一轮与本机历史最佳训练统计。',
+          inputSchema: { type: 'object', properties: {}, additionalProperties: false },
+          annotations: { readOnlyHint: true, untrustedContentHint: false },
+          execute: () => ({ current: { running: state.running, trials: state.trials, correct: state.correct, average_reaction_ms: Math.round(average(state.correctTimes)) || null }, best: readStats() })
+        });
+      }
+
+      renderBest();
+      returnHome();
+    })();
+  </script>
+</body>
+</html>
